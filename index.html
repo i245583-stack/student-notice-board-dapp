@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Notice Board dApp</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <main class="container">
+    <h1>Decentralised Student Notice Board</h1>
+    <p class="intro">A simple dApp that stores and retrieves a student notice on the Sepolia test network.</p>
+
+    <img class="banner"
+      src="https://placehold.co/900x220/e8eefc/243b64?text=Student+Notice+Board"
+      alt="Illustration banner for the Student Notice Board">
+
+    <section class="card">
+      <h2>How to use this dApp</h2>
+      <ol>
+        <li>Connect your MetaMask wallet.</li>
+        <li>Enter a notice and save it to the blockchain.</li>
+        <li>Read the saved notice or clear it.</li>
+      </ol>
+      <p>Learn more: <a href="https://www.w3schools.com/html/" target="_blank" rel="noopener">HTML tutorial at W3Schools</a>.</p>
+      <button id="connectBtn">Connect MetaMask</button>
+      <p id="walletStatus">Wallet: Not connected</p>
+    </section>
+
+    <section class="card">
+      <h2>Manage notice</h2>
+      <label for="messageInput">Enter a notice</label>
+      <textarea id="messageInput" rows="3" placeholder="Type your student notice here..."></textarea>
+      <div class="actions">
+        <button id="saveBtn">Save notice (write)</button>
+        <button id="readBtn" class="secondary">Read notice (read)</button>
+        <button id="clearBtn" class="danger">Clear notice (write)</button>
+      </div>
+      <p id="noticeOutput">Saved notice will appear here.</p>
+      <p id="countOutput">Number of updates: —</p>
+      <p id="txStatus" role="status">Transaction status: Waiting.</p>
+    </section>
+  </main>
+
+  <script>
+    // IMPORTANT: After deploying your contract, paste its address between the quotes.
+    const contractAddress = "0x5961B3e0B638DC6937BeF2a0b074775B847Bc745";
+
+    // ABI = the list of contract functions the webpage is allowed to call.
+    const contractABI = [
+      "function setMessage(string newMessage)",
+      "function getMessage() view returns (string)",
+      "function getMessageCount() view returns (uint256)",
+      "function clearMessage()"
+    ];
+
+    let provider;
+    let signer;
+    let contract;
+
+    const walletStatus = document.getElementById("walletStatus");
+    const txStatus = document.getElementById("txStatus");
+
+    async function connectWallet() {
+      try {
+        if (!window.ethereum) {
+          alert("MetaMask is not installed. Please install/enable the MetaMask extension.");
+          return;
+        }
+        if (contractAddress === "PASTE_YOUR_DEPLOYED_CONTRACT_ADDRESS_HERE") {
+          alert("First deploy the contract and paste its address into index.html.");
+          return;
+        }
+
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        provider = new ethers.BrowserProvider(window.ethereum);
+
+        const network = await provider.getNetwork();
+        if (Number(network.chainId) !== 11155111) {
+          txStatus.textContent = "Please switch MetaMask to Sepolia test network.";
+          try {
+            await window.ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: "0xaa36a7" }]
+            });
+            provider = new ethers.BrowserProvider(window.ethereum);
+          } catch (switchError) {
+            throw new Error("Switch MetaMask to Sepolia, then click Connect MetaMask again.");
+          }
+        }
+
+        signer = await provider.getSigner();
+        contract = new ethers.Contract(contractAddress, contractABI, signer);
+        walletStatus.textContent = "Wallet connected: " + await signer.getAddress();
+        txStatus.textContent = "Connected to the Student Notice Board contract on Sepolia.";
+      } catch (error) {
+        txStatus.textContent = "Connection error: " + (error.shortMessage || error.message);
+      }
+    }
+
+    async function saveMessage() {
+      try {
+        if (!contract) return alert("Connect MetaMask first.");
+        const message = document.getElementById("messageInput").value.trim();
+        if (!message) return alert("Please type a notice first.");
+        txStatus.textContent = "Please confirm the transaction in MetaMask...";
+        const tx = await contract.setMessage(message);
+        txStatus.textContent = "Transaction sent. Waiting for confirmation...";
+        await tx.wait();
+        txStatus.textContent = "Success! Notice saved. Transaction: " + tx.hash;
+        await readMessage();
+      } catch (error) {
+        txStatus.textContent = "Save error: " + (error.shortMessage || error.message);
+      }
+    }
+
+    async function readMessage() {
+      try {
+        if (!contract) return alert("Connect MetaMask first.");
+        const message = await contract.getMessage();
+        const count = await contract.getMessageCount();
+        document.getElementById("noticeOutput").textContent =
+          "Current notice: " + (message || "(No notice has been saved.)");
+        document.getElementById("countOutput").textContent =
+          "Number of updates: " + count.toString();
+        txStatus.textContent = "Notice read successfully from the blockchain.";
+      } catch (error) {
+        txStatus.textContent = "Read error: " + (error.shortMessage || error.message);
+      }
+    }
+
+    async function clearMessage() {
+      try {
+        if (!contract) return alert("Connect MetaMask first.");
+        txStatus.textContent = "Please confirm the clear transaction in MetaMask...";
+        const tx = await contract.clearMessage();
+        txStatus.textContent = "Transaction sent. Waiting for confirmation...";
+        await tx.wait();
+        txStatus.textContent = "Success! Notice cleared. Transaction: " + tx.hash;
+        await readMessage();
+      } catch (error) {
+        txStatus.textContent = "Clear error: " + (error.shortMessage || error.message);
+      }
+    }
+
+    document.getElementById("connectBtn").addEventListener("click", connectWallet);
+    document.getElementById("saveBtn").addEventListener("click", saveMessage);
+    document.getElementById("readBtn").addEventListener("click", readMessage);
+    document.getElementById("clearBtn").addEventListener("click", clearMessage);
+  </script>
+</body>
+</html>
