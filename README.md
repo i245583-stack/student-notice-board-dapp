@@ -29,8 +29,9 @@ A small decentralised application that lets a user save, read, count, and clear 
 
 ## Deployment details
 - Network: Sepolia testnet
-- Contract address: ADD YOUR DEPLOYED ADDRESS HERE
-- GitHub repository: ADD YOUR REPOSITORY LINK HERE
+- Contract address: 0x5961B3e0B638DC6937BeF2a0b074775B847Bc745
+- GitHub repository: https://github.com/i245583-stack/student-notice-board-dapp
+
 
 ## Notes
 - This is a testnet educational project. Use test ETH only.
